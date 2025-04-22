@@ -1,22 +1,27 @@
+import json
+import os
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict
-from datetime import datetime, timedelta
 
-# In-memory mock database for family and friends
-family_and_friends = {
-    "FF001": {
-        "firstname": "Rupal",
-        "lastname": "Majmudar",
-        "family_members": ["wife: Jyoti", "son: Ankush", "daughter: Aashna"],
-        "important_dates": {"dob": "15-04-1968", "wedding_anniversary": "24-12-1991"}
-    },
-    "FF002": {
-        "firstname": "Rahul",
-        "lastname": "Verma",
-        "family_members": ["friend: Rajesh"],
-        "important_dates": {"dob": "10-06-1985"}
-    }
-}
+# File path for JSON storage
+DATA_FILE = "family_and_friends.json"
+
+# Load data from JSON file
+def load_data() -> Dict:
+    """Load family and friends data from a JSON file."""
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as file:
+            return json.load(file)
+    return {}
+
+# Save data to JSON file
+def save_data(data: Dict) -> None:
+    """Save family and friends data to a JSON file."""
+    with open(DATA_FILE, "w") as file:
+        json.dump(data, file, indent=4)
+
+# Initialize data
+family_and_friends = load_data()
 
 # Create MCP server
 mcp = FastMCP("FamilyAndFriendsMcpServer")
@@ -24,7 +29,7 @@ mcp = FastMCP("FamilyAndFriendsMcpServer")
 # Tool: List all family and friends
 @mcp.tool()
 def list_family_and_friends() -> str:
-    """List all family and friends with their details"""
+    """List all family and friends with their details."""
     if not family_and_friends:
         return "No family or friends found."
     
@@ -55,16 +60,18 @@ def add_family_or_friend(ff_id: str, firstname: str, lastname: str, family_membe
         "family_members": family_members,
         "important_dates": important_dates
     }
+    save_data(family_and_friends)
     return f"Family/Friend member {firstname} {lastname} added successfully with FFId {ff_id}."
 
 # Tool: Remove a family or friend member
 @mcp.tool()
 def remove_family_or_friend(ff_id: str) -> str:
-    """Remove a family or friend member from the list"""
+    """Remove a family or friend member from the list."""
     if ff_id not in family_and_friends:
         return f"FFId {ff_id} not found."
     
     removed_member = family_and_friends.pop(ff_id)
+    save_data(family_and_friends)
     return f"Family/Friend member {removed_member['firstname']} {removed_member['lastname']} removed successfully."
 
 # Tool: Find the closest important date
@@ -74,6 +81,8 @@ def find_closest_important_date(date: str = None) -> str:
     Find the family or friend member with the closest important date to the given date.
     If no date is provided, defaults to today.
     """
+    from datetime import datetime, timedelta
+
     if not family_and_friends:
         return "No family or friends found."
 
