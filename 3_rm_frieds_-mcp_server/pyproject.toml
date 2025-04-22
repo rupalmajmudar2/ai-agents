@@ -1,0 +1,7 @@
+[project]
+name = "3-rm-frieds-mcp-server"
+version = "0.1.0"
+description = "Family and Friends MCP Server"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
