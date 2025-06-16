@@ -19,7 +19,7 @@ def redact_pii_fields(text, pii_field_names):
     redacted_text = text
     for field in pii_field_names:
         # Pattern: FieldName: value OR FieldName value (value can be anything except newline)
-        pattern = rf"({re.escape(field)}\s*[:]?\s+)([^\n\.]+)"
+        pattern = rf"({re.escape(field)}\s*[:]?\s+)([^\n]+)"
         matches = re.findall(pattern, text, re.IGNORECASE)
         for match in matches:
             field_label, value = match
