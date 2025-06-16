@@ -3,6 +3,22 @@ import json
 import re
 import os
 import openai
+import pytesseract
+from PIL import Image
+import io
+import shutil
+
+# Function to check if Tesseract is installed
+# https://github.com/UB-Mannheim/tesseract/wiki has the .exe for Windows
+def check_tesseract_installed():
+    tesseract_path = shutil.which("tesseract")
+    if not tesseract_path:
+        print("ERROR: Tesseract OCR is not installed or not in your PATH.")
+        print("Download and install from: https://github.com/tesseract-ocr/tesseract")
+        print("After installation, add the install directory (e.g., C:\\Program Files\\Tesseract-OCR) to your system PATH.")
+        exit(1)
+    else:
+        print(f"Tesseract found at: {tesseract_path}")
 
 # Function to extract text from a PDF
 def extract_text_from_pdf(pdf_path):
@@ -10,7 +26,16 @@ def extract_text_from_pdf(pdf_path):
     text = ""
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)
-        text += page.get_text("text")  # Extract text from page
+        page_text = page.get_text("text")
+        if not page_text.strip():
+            # If no digital text, use OCR
+            pix = page.get_pixmap()
+            img_bytes = pix.tobytes("png")
+            image = Image.open(io.BytesIO(img_bytes))
+            ocr_text = pytesseract.image_to_string(image)
+            text += ocr_text
+        else:
+            text += page_text
     return text
 
 # Function to redact PII values based on field names in extracted text
@@ -18,8 +43,8 @@ def redact_pii_fields(text, pii_field_names):
     original_pii = {}
     redacted_text = text
     for field in pii_field_names:
-        # Pattern: FieldName: value OR FieldName value (value can be anything except newline)
-        pattern = rf"({re.escape(field)}\s*[:]?\s+)([^\n]+)"
+        # Pattern: FieldName (optional colon, dash, or whitespace) value (value can be anything except newline)
+        pattern = rf"({re.escape(field)}\s*[:\-–]?\s*)([^\n]+)"
         matches = re.findall(pattern, text, re.IGNORECASE)
         for match in matches:
             field_label, value = match
@@ -74,11 +99,12 @@ pii_field_names = [
     'Email',
     'Phone',
     'Address',
-    'Zip'
+    'Zip',
+    'Marital Status',
 ]
 
 # Example input PDF
-input_pdf = 'original.pdf'
+input_pdf = 'Bob_Bild.pdf' #'original.pdf'
 output_txt = 'anonymized.txt'
 
 # Try to find the PDF in the script directory and workspace root
@@ -100,6 +126,9 @@ if not pdf_found:
         print('  -', path)
     print('Please place original.pdf in one of these locations or specify the correct path.')
     exit(1)
+
+if __name__ == "__main__":
+    check_tesseract_installed()
 
 # Extract text from PDF
 pdf_text = extract_text_from_pdf(input_pdf)
